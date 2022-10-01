@@ -1,5 +1,4 @@
 from __future__ import print_function
-
 import secrets
 import datetime
 from dateutil import parser
@@ -16,11 +15,7 @@ from googleapiclient.errors import HttpError
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-
 def main():
-    """Shows basic usage of the Google Calendar API.
-    Prints the start and name of the next 10 events on the user's calendar.
-    """
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -40,6 +35,7 @@ def main():
             token.write(creds.to_json())
 
     commitHours(creds)
+    addEvent(creds, 2, "Testing what I know!")
 
 def printDailyEvents(all_events_ordered):
     for time, events  in all_events_ordered.items():  
@@ -66,9 +62,8 @@ def commitHours(creds):
         service = build('calendar', 'v3', credentials=creds)
 
         # Call the Calendar API
-        
-        today = datetime.date.today()  # 'Z' indicates UTC time
-        timeStart = str(today) + "T10:00:00Z"
+        today = datetime.date.today()
+        timeStart = str(today) + "T10:00:00Z" # 'Z' indicates UTC time
         timeEnd = str(today) + "T23:59:59Z"
         print('Getting today\'s working hours')
     
@@ -105,10 +100,7 @@ def commitHours(creds):
 
             all_events_ordered = OrderedDict(sorted(all_events.items()))
 
-        
         printDailyEvents(all_events_ordered)
-            
-
         print(f"Total busy time today: {total_duration}")    
         connection = sqlite3.connect(f'time.db')
         cursor = connection.cursor()    
@@ -123,6 +115,28 @@ def commitHours(creds):
     except HttpError as error:
         print('An error occurred: %s' % error)
 
+
+def addEvent(creds, duration, description):
+    start = datetime.datetime.utcnow()
+    end = datetime.datetime.utcnow() + datetime.timedelta(hours=duration)
+    f_start = start.isoformat() + "Z"
+    f_end = end.isoformat() + "Z"
+
+    event = {
+        'sumamry': description,
+        'start': {
+            'dateTime': f_start,
+            'timeZone': 'America/Chicago',
+        },
+        'end': {
+            'dateTime': f_end,
+            'timeZone': 'America/Chicago',
+        }
+    }
+
+    service = build('calendar', 'v3', credentials=creds)
+    event = service.events().insert(calendarId=secrets.CALENDAR1, body=event).execute()
+    print("Event created: %s" % (event.get('htmlLink')))
 
 if __name__ == '__main__':
     main()
